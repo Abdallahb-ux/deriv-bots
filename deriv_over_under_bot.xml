@@ -13,15 +13,21 @@
     <variable id="text4">text4</variable>
     <variable id="text">text</variable>
     <variable id="text1">text1</variable>
+
+    <!-- Risk & filters -->
+    <variable id="StopLossInput">StopLossInput</variable>
+    <variable id="StopLoss">StopLoss</variable>
+    <variable id="TakeProfit">TakeProfit</variable>
+    <variable id="TotalProfit">TotalProfit</variable>
+    <variable id="MinDifference">MinDifference</variable>
   </variables>
 
-  <!-- Trade definition: synthetic / volatility indices, multiple volatility symbols included -->
+  <!-- Trade definition -->
   <block type="trade_definition" id="trade_def" deletable="false" x="0" y="40">
     <statement name="TRADE_OPTIONS">
       <block type="trade_definition_market" id="market" deletable="false" movable="false">
         <field name="MARKET_LIST">synthetic_index</field>
         <field name="SUBMARKET_LIST">volatility</field>
-        <!-- Common volatility symbols — replace these strings with exact symbol codes if your Dbot requires them -->
         <field name="SYMBOL_LIST">Volatility 25 Index,Volatility 50 Index,Volatility 75 Index,Volatility 100 Index,Volatility 25 (1s) Index,Volatility 50 (1s) Index,Volatility 75 (1s) Index,Volatility 100 (1s) Index</field>
         <next>
           <block type="trade_definition_tradetype" id="tradetype" deletable="false" movable="false">
@@ -32,7 +38,6 @@
                 <field name="TYPE_LIST">both</field>
                 <next>
                   <block type="trade_definition_candleinterval" id="candle" deletable="false" movable="false">
-                    <!-- Using 1 second ticks where available; you can change to 60 if you prefer 1-minute candles -->
                     <field name="CANDLEINTERVAL_LIST">1</field>
                     <next>
                       <block type="trade_definition_restartbuysell" id="restart" deletable="false" movable="false">
@@ -53,39 +58,76 @@
       </block>
     </statement>
 
-    <!-- Initialization variables -->
+    <!-- Run once at start: initialization + StopLossInput => StopLoss (negative) + MinDifference -->
     <statement name="INITIALIZATION">
       <block type="variables_set" id="init_digitanalysis">
         <field name="VAR" id="DigitAnalysis">DigitAnalysis</field>
         <value name="VALUE">
-          <block type="math_number" id="num_digits">
-            <field name="NUM">20</field> <!-- number of last digits to analyze -->
-          </block>
+          <block type="math_number" id="num_digits"><field name="NUM">20</field></block>
         </value>
         <next>
           <block type="variables_set" id="init_stake">
             <field name="VAR" id="Stake">Stake</field>
             <value name="VALUE">
-              <block type="math_number" id="stake_val">
-                <field name="NUM">0.35</field>
-              </block>
+              <block type="math_number" id="stake_val"><field name="NUM">0.35</field></block>
             </value>
             <next>
               <block type="variables_set" id="init_martingale">
                 <field name="VAR" id="Martingale">Martingale</field>
                 <value name="VALUE">
-                  <block type="math_number" id="martingale_val">
-                    <field name="NUM">2</field>
-                  </block>
+                  <block type="math_number" id="martingale_val"><field name="NUM">2</field></block>
                 </value>
                 <next>
                   <block type="variables_set" id="init_initialstake">
                     <field name="VAR" id="InitialStake">InitialStake</field>
                     <value name="VALUE">
-                      <block type="math_number" id="initial_stake_val">
-                        <field name="NUM">0.35</field>
-                      </block>
+                      <block type="math_number" id="initial_stake_val"><field name="NUM">0.35</field></block>
                     </value>
+                    <next>
+                      <block type="variables_set" id="init_stoplossinput">
+                        <field name="VAR" id="StopLossInput">StopLossInput</field>
+                        <value name="VALUE">
+                          <block type="math_number" id="stoploss_input_val"><field name="NUM">10</field></block>
+                        </value>
+                        <next>
+                          <block type="variables_set" id="init_takeprofit">
+                            <field name="VAR" id="TakeProfit">TakeProfit</field>
+                            <value name="VALUE">
+                              <block type="math_number" id="takeprofit_val"><field name="NUM">20</field></block>
+                            </value>
+                            <next>
+                              <block type="variables_set" id="init_totalprofit">
+                                <field name="VAR" id="TotalProfit">TotalProfit</field>
+                                <value name="VALUE">
+                                  <block type="math_number" id="totalprofit_init"><field name="NUM">0</field></block>
+                                </value>
+                                <next>
+                                  <!-- MinDifference default 3% (directional) -->
+                                  <block type="variables_set" id="init_mindiff">
+                                    <field name="VAR" id="MinDifference">MinDifference</field>
+                                    <value name="VALUE">
+                                      <block type="math_number" id="mindiff_val"><field name="NUM">3</field></block>
+                                    </value>
+                                    <next>
+                                      <!-- Convert StopLossInput (positive) into internal negative StopLoss = 0 - StopLossInput -->
+                                      <block type="variables_set" id="compute_stoploss_negative">
+                                        <field name="VAR" id="StopLoss">StopLoss</field>
+                                        <value name="VALUE">
+                                          <block type="math_arithmetic" id="negate_sl"><field name="OP">MINUS</field>
+                                            <value name="A"><block type="math_number"><field name="NUM">0</field></block></value>
+                                            <value name="B"><block type="variables_get"><field name="VAR" id="StopLossInput">StopLossInput</field></block></value>
+                                          </block>
+                                        </value>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
                   </block>
                 </next>
               </block>
@@ -95,58 +137,44 @@
       </block>
     </statement>
 
-    <!-- Trade options: duration and amount use variables -->
+    <!-- Trade options: no prediction -->
     <statement name="SUBMARKET">
       <block type="trade_definition_tradeoptions" id="trade_options">
-        <mutation xmlns="http://www.w3.org/1999/xhtml" has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
+        <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="false"></mutation>
         <field name="DURATIONTYPE_LIST">t</field>
         <value name="DURATION">
-          <shadow type="math_number_positive" id="dur_shadow">
-            <field name="NUM">1</field>
-          </shadow>
+          <shadow type="math_number_positive" id="dur_shadow"><field name="NUM">1</field></shadow>
         </value>
         <value name="AMOUNT">
-          <shadow type="math_number_positive" id="amt_shadow">
-            <field name="NUM">1</field>
-          </shadow>
-          <block type="variables_get" id="get_stake">
-            <field name="VAR" id="Stake">Stake</field>
-          </block>
+          <shadow type="math_number_positive" id="amt_shadow"><field name="NUM">1</field></shadow>
+          <block type="variables_get" id="get_stake"><field name="VAR" id="Stake">Stake</field></block>
         </value>
       </block>
     </statement>
   </block>
 
-  <!-- During purchase (sell) — keep default check -->
+  <!-- During purchase (sell check) -->
   <block type="during_purchase" id="during_purchase" x="900" y="40">
     <statement name="DURING_PURCHASE_STACK">
       <block type="controls_if" id="if_check_sell">
-        <value name="IF0">
-          <block type="check_sell" id="check_sell_block"></block>
-        </value>
+        <value name="IF0"><block type="check_sell" id="check_sell_block"/></value>
       </block>
     </statement>
   </block>
 
-  <!-- After purchase: martingale logic -->
+  <!-- After purchase: martingale + update TotalProfit + SL/TP checks -->
   <block type="after_purchase" id="after_purchase" x="900" y="300">
     <statement name="AFTERPURCHASE_STACK">
       <block type="controls_if" id="after_if_win">
-        <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+        <mutation else="1"></mutation>
         <value name="IF0">
-          <block type="contract_check_result" id="check_win">
-            <field name="CHECK_RESULT">win</field>
-          </block>
+          <block type="contract_check_result" id="check_win"><field name="CHECK_RESULT">win</field></block>
         </value>
         <statement name="DO0">
           <!-- On win: reset stake to initial -->
           <block type="variables_set" id="reset_stake">
             <field name="VAR" id="Stake">Stake</field>
-            <value name="VALUE">
-              <block type="variables_get" id="get_initial">
-                <field name="VAR" id="InitialStake">InitialStake</field>
-              </block>
-            </value>
+            <value name="VALUE"><block type="variables_get" id="get_initial"><field name="VAR" id="InitialStake">InitialStake</field></block></value>
           </block>
         </statement>
         <statement name="ELSE">
@@ -154,30 +182,65 @@
           <block type="variables_set" id="martingale_apply">
             <field name="VAR" id="Stake">Stake</field>
             <value name="VALUE">
-              <block type="math_arithmetic" id="multiply_stake">
-                <field name="OP">MULTIPLY</field>
-                <value name="A">
-                  <block type="variables_get" id="get_stake2">
-                    <field name="VAR" id="Stake">Stake</field>
-                  </block>
-                </value>
-                <value name="B">
-                  <block type="variables_get" id="get_mg">
-                    <field name="VAR" id="Martingale">Martingale</field>
-                  </block>
-                </value>
+              <block type="math_arithmetic" id="multiply_stake"><field name="OP">MULTIPLY</field>
+                <value name="A"><block type="variables_get"><field name="VAR" id="Stake">Stake</field></block></value>
+                <value name="B"><block type="variables_get"><field name="VAR" id="Martingale">Martingale</field></block></value>
               </block>
             </value>
           </block>
         </statement>
+
+        <!-- After determining win/loss, update TotalProfit and check SL/TP -->
         <next>
-          <block type="trade_again" id="trade_again_block"></block>
+          <block type="variables_set" id="update_totalprofit">
+            <field name="VAR" id="TotalProfit">TotalProfit</field>
+            <value name="VALUE">
+              <block type="math_arithmetic" id="add_profit"><field name="OP">ADD</field>
+                <value name="A"><block type="variables_get" id="get_totalprofit_before"><field name="VAR" id="TotalProfit">TotalProfit</field></block></value>
+                <value name="B"><block type="contract_profit" id="get_contract_profit"/></value>
+              </block>
+            </value>
+            <next>
+              <block type="controls_if" id="check_tp_sl">
+                <mutation elseif="1" else="1"></mutation>
+                <value name="IF0">
+                  <block type="logic_compare" id="tp_check"><field name="OP">GTE</field>
+                    <value name="A"><block type="variables_get" id="get_totalprofit_tp"><field name="VAR" id="TotalProfit">TotalProfit</field></block></value>
+                    <value name="B"><block type="variables_get" id="get_takeprofit"><field name="VAR" id="TakeProfit">TakeProfit</field></block></value>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="notify" id="notify_tp"><field name="NOTIFICATION_TYPE">success</field><field name="NOTIFICATION_SOUND">loud</field>
+                    <value name="MESSAGE"><block type="text"><field name="TEXT">Take Profit reached — stopping bot.</field></block></value>
+                    <next><block type="stop" id="stop_on_tp"/></next>
+                  </block>
+                </statement>
+
+                <value name="IF1">
+                  <block type="logic_compare" id="sl_check"><field name="OP">LTE</field>
+                    <value name="A"><block type="variables_get" id="get_totalprofit_sl"><field name="VAR" id="TotalProfit">TotalProfit</field></block></value>
+                    <value name="B"><block type="variables_get" id="get_stoploss"><field name="VAR" id="StopLoss">StopLoss</field></block></value>
+                  </block>
+                </value>
+                <statement name="DO1">
+                  <block type="notify" id="notify_sl"><field name="NOTIFICATION_TYPE">error</field><field name="NOTIFICATION_SOUND">loud</field>
+                    <value name="MESSAGE"><block type="text"><field name="TEXT">Stop Loss reached — stopping bot.</field></block></value>
+                    <next><block type="stop" id="stop_on_sl"/></next>
+                  </block>
+                </statement>
+
+                <statement name="ELSE">
+                  <block type="noop" id="continue_trading"/>
+                </statement>
+              </block>
+            </next>
+          </block>
         </next>
       </block>
     </statement>
   </block>
 
-  <!-- BEFORE PURCHASE: analyze last digits and decide Over3 vs Under7 -->
+  <!-- BEFORE PURCHASE: analyze last digits and decide Over3 vs Under7 with MinDifference filter -->
   <block type="before_purchase" id="before_purchase" deletable="false" x="0" y="720">
     <statement name="BEFOREPURCHASE_STACK">
       <!-- Get last N digits list -->
@@ -185,299 +248,149 @@
         <field name="VAR" id="DigitsList">DigitsList</field>
         <value name="VALUE">
           <block type="lists_getSublist" id="get_last_n">
-            <mutation xmlns="http://www.w3.org/1999/xhtml" at1="true" at2="false"></mutation>
+            <mutation at1="true" at2="false"></mutation>
             <field name="WHERE1">FROM_END</field>
             <field name="WHERE2">LAST</field>
-            <value name="LIST">
-              <block type="lastDigitList" id="last_digit_list"></block>
-            </value>
-            <value name="AT1">
-              <block type="variables_get" id="get_digit_analysis">
-                <field name="VAR" id="DigitAnalysis">DigitAnalysis</field>
-              </block>
-            </value>
+            <value name="LIST"><block type="lastDigitList" id="last_digit_list"/></value>
+            <value name="AT1"><block type="variables_get" id="get_digit_analysis"><field name="VAR" id="DigitAnalysis">DigitAnalysis</field></block></value>
           </block>
         </value>
         <next>
           <!-- Init counters -->
-          <block type="variables_set" id="init_over3">
-            <field name="VAR" id="Over3Count">Over3Count</field>
-            <value name="VALUE">
-              <block type="math_number" id="zero1">
-                <field name="NUM">0</field>
-              </block>
-            </value>
+          <block type="variables_set" id="init_over3"><field name="VAR" id="Over3Count">Over3Count</field>
+            <value name="VALUE"><block type="math_number"><field name="NUM">0</field></block></value>
             <next>
-              <block type="variables_set" id="init_under7">
-                <field name="VAR" id="Under7Count">Under7Count</field>
-                <value name="VALUE">
-                  <block type="math_number" id="zero2">
-                    <field name="NUM">0</field>
-                  </block>
-                </value>
+              <block type="variables_set" id="init_under7"><field name="VAR" id="Under7Count">Under7Count</field>
+                <value name="VALUE"><block type="math_number"><field name="NUM">0</field></block></value>
                 <next>
                   <!-- Loop through DigitsList -->
-                  <block type="controls_forEach" id="for_each_digit">
-                    <field name="VAR" id="i">i</field>
-                    <value name="LIST">
-                      <block type="variables_get" id="get_digitslist2">
-                        <field name="VAR" id="DigitsList">DigitsList</field>
-                      </block>
-                    </value>
+                  <block type="controls_forEach" id="for_each_digit"><field name="VAR" id="i">i</field>
+                    <value name="LIST"><block type="variables_get"><field name="VAR" id="DigitsList">DigitsList</field></block></value>
                     <statement name="DO">
-                      <!-- If digit > 3 then Over3Count++ -->
                       <block type="controls_if" id="if_digit_gt_3">
                         <value name="IF0">
-                          <block type="logic_compare" id="comp_gt_3">
-                            <field name="OP">GT</field>
-                            <value name="A">
-                              <block type="variables_get" id="get_i_gt">
-                                <field name="VAR" id="i">i</field>
-                              </block>
-                            </value>
-                            <value name="B">
-                              <block type="math_number" id="num3">
-                                <field name="NUM">3</field>
-                              </block>
-                            </value>
+                          <block type="logic_compare" id="comp_gt_3"><field name="OP">GT</field>
+                            <value name="A"><block type="variables_get"><field name="VAR" id="i">i</field></block></value>
+                            <value name="B"><block type="math_number"><field name="NUM">3</field></block></value>
                           </block>
                         </value>
-                        <statement name="DO0">
-                          <block type="math_change" id="inc_over3">
-                            <field name="VAR" id="Over3Count">Over3Count</field>
-                            <value name="DELTA">
-                              <block type="math_number" id="one_inc">
-                                <field name="NUM">1</field>
-                              </block>
-                            </value>
-                          </block>
-                        </statement>
+                        <statement name="DO0"><block type="math_change" id="inc_over3"><field name="VAR" id="Over3Count">Over3Count</field><value name="DELTA"><block type="math_number"><field name="NUM">1</field></block></value></block></statement>
                         <statement name="ELSE">
-                          <!-- else do nothing here for Over3 -->
                           <block type="controls_if" id="nested_check_under7">
                             <value name="IF0">
-                              <block type="logic_compare" id="comp_lt_7">
-                                <field name="OP">LT</field>
-                                <value name="A">
-                                  <block type="variables_get" id="get_i_lt">
-                                    <field name="VAR" id="i">i</field>
-                                  </block>
-                                </value>
-                                <value name="B">
-                                  <block type="math_number" id="num7">
-                                    <field name="NUM">7</field>
-                                  </block>
-                                </value>
+                              <block type="logic_compare" id="comp_lt_7"><field name="OP">LT</field>
+                                <value name="A"><block type="variables_get"><field name="VAR" id="i">i</field></block></value>
+                                <value name="B"><block type="math_number"><field name="NUM">7</field></block></value>
                               </block>
                             </value>
-                            <statement name="DO0">
-                              <block type="math_change" id="inc_under7">
-                                <field name="VAR" id="Under7Count">Under7Count</field>
-                                <value name="DELTA">
-                                  <block type="math_number" id="one_inc2">
-                                    <field name="NUM">1</field>
-                                  </block>
-                                </value>
-                              </block>
-                            </statement>
+                            <statement name="DO0"><block type="math_change" id="inc_under7"><field name="VAR" id="Under7Count">Under7Count</field><value name="DELTA"><block type="math_number"><field name="NUM">1</field></block></value></block></statement>
                           </block>
                         </statement>
                       </block>
                     </statement>
                     <next>
                       <!-- After loop: calculate percentages -->
-                      <block type="variables_set" id="calc_over3_pct">
-                        <field name="VAR" id="Over3Percentage">Over3Percentage</field>
+                      <block type="variables_set" id="calc_over3_pct"><field name="VAR" id="Over3Percentage">Over3Percentage</field>
                         <value name="VALUE">
-                          <block type="math_arithmetic" id="over3_pct_calc">
-                            <field name="OP">MULTIPLY</field>
-                            <value name="A">
-                              <block type="variables_get" id="get_over3count_var">
-                                <field name="VAR" id="Over3Count">Over3Count</field>
-                              </block>
-                            </value>
+                          <block type="math_arithmetic" id="over3_pct_calc"><field name="OP">MULTIPLY</field>
+                            <value name="A"><block type="variables_get"><field name="VAR" id="Over3Count">Over3Count</field></block></value>
                             <value name="B">
-                              <block type="math_arithmetic" id="div_by_total">
-                                <field name="OP">DIVIDE</field>
-                                <value name="A">
-                                  <block type="math_number" id="num100a">
-                                    <field name="NUM">100</field>
-                                  </block>
-                                </value>
-                                <value name="B">
-                                  <block type="lists_length" id="len_digits">
-                                    <value name="VALUE">
-                                      <block type="variables_get" id="get_digits_len">
-                                        <field name="VAR" id="DigitsList">DigitsList</field>
-                                      </block>
-                                    </value>
-                                  </block>
-                                </value>
+                              <block type="math_arithmetic" id="div_by_total"><field name="OP">DIVIDE</field>
+                                <value name="A"><block type="math_number" id="num100a"><field name="NUM">100</field></block></value>
+                                <value name="B"><block type="lists_length" id="len_digits"><value name="VALUE"><block type="variables_get" id="get_digits_len"><field name="VAR" id="DigitsList">DigitsList</field></block></value></block></value>
                               </block>
                             </value>
                           </block>
                         </value>
                         <next>
-                          <block type="variables_set" id="calc_under7_pct">
-                            <field name="VAR" id="Under7Percentage">Under7Percentage</field>
+                          <block type="variables_set" id="calc_under7_pct"><field name="VAR" id="Under7Percentage">Under7Percentage</field>
                             <value name="VALUE">
-                              <block type="math_arithmetic" id="under7_pct_calc">
-                                <field name="OP">MULTIPLY</field>
-                                <value name="A">
-                                  <block type="variables_get" id="get_under7count_var">
-                                    <field name="VAR" id="Under7Count">Under7Count</field>
-                                  </block>
-                                </value>
+                              <block type="math_arithmetic" id="under7_pct_calc"><field name="OP">MULTIPLY</field>
+                                <value name="A"><block type="variables_get" id="get_under7count_var"><field name="VAR" id="Under7Count">Under7Count</field></block></value>
                                 <value name="B">
-                                  <block type="math_arithmetic" id="div_by_total2">
-                                    <field name="OP">DIVIDE</field>
-                                    <value name="A">
-                                      <block type="math_number" id="num100b">
-                                        <field name="NUM">100</field>
-                                      </block>
-                                    </value>
-                                    <value name="B">
-                                      <block type="lists_length" id="len_digits2">
-                                        <value name="VALUE">
-                                          <block type="variables_get" id="get_digits_len2">
-                                            <field name="VAR" id="DigitsList">DigitsList</field>
-                                          </block>
-                                        </value>
-                                      </block>
-                                    </value>
+                                  <block type="math_arithmetic" id="div_by_total2"><field name="OP">DIVIDE</field>
+                                    <value name="A"><block type="math_number" id="num100b"><field name="NUM">100</field></block></value>
+                                    <value name="B"><block type="lists_length" id="len_digits2"><value name="VALUE"><block type="variables_get" id="get_digits_len2"><field name="VAR" id="DigitsList">DigitsList</field></block></value></block></value>
                                   </block>
                                 </value>
                               </block>
                             </value>
                             <next>
-                              <!-- Create a small message and notify for debugging -->
-                              <block type="text_join" id="join_debug">
-                                <field name="VARIABLE" id="text4">text4</field>
+                              <!-- Debug message and decision with MinDifference directional check -->
+                              <block type="text_join" id="join_debug"><field name="VARIABLE" id="text4">text4</field>
                                 <statement name="STACK">
-                                  <block type="text_statement" id="txt1">
-                                    <value name="TEXT">
-                                      <block type="text" id="txtlbl1">
-                                        <field name="TEXT">Over3%: </field>
-                                      </block>
-                                    </value>
-                                    <next>
-                                      <block type="text_statement" id="txt2">
-                                        <value name="TEXT">
-                                          <block type="variables_get" id="get_over3pct_txt">
-                                            <field name="VAR" id="Over3Percentage">Over3Percentage</field>
-                                          </block>
-                                        </value>
-                                        <next>
-                                          <block type="text_statement" id="txt3">
-                                            <value name="TEXT">
-                                              <block type="text" id="txtlbl2">
-                                                <field name="TEXT">  Under7%: </field>
-                                              </block>
-                                            </value>
-                                            <next>
-                                              <block type="text_statement" id="txt4">
-                                                <value name="TEXT">
-                                                  <block type="variables_get" id="get_under7pct_txt">
-                                                    <field name="VAR" id="Under7Percentage">Under7Percentage</field>
-                                                  </block>
-                                                </value>
-                                              </block>
-                                            </next>
-                                          </block>
-                                        </next>
-                                      </block>
+                                  <block type="text_statement"><value name="TEXT"><block type="text"><field name="TEXT">Over3%: </field></block></value>
+                                    <next><block type="text_statement"><value name="TEXT"><block type="variables_get"><field name="VAR" id="Over3Percentage">Over3Percentage</field></block></value>
+                                      <next><block type="text_statement"><value name="TEXT"><block type="text"><field name="TEXT">  Under7%: </field></block></value>
+                                        <next><block type="text_statement"><value name="TEXT"><block type="variables_get"><field name="VAR" id="Under7Percentage">Under7Percentage</field></block></value></block></next>
+                                      </next>
                                     </next>
                                   </block>
                                 </statement>
                                 <next>
-                                  <block type="notify" id="notify_debug">
-                                    <field name="NOTIFICATION_TYPE">success</field>
-                                    <field name="NOTIFICATION_SOUND">silent</field>
-                                    <value name="MESSAGE">
-                                      <block type="variables_get" id="get_text4_notify">
-                                        <field name="VAR" id="text4">text4</field>
-                                      </block>
-                                    </value>
+                                  <block type="notify" id="notify_debug"><field name="NOTIFICATION_TYPE">success</field><field name="NOTIFICATION_SOUND">silent</field>
+                                    <value name="MESSAGE"><block type="variables_get" id="get_text4_notify"><field name="VAR" id="text4">text4</field></block></value>
                                     <next>
-                                      <!-- Decision: Over3 > Under7 => DIGITOVER (prediction 3). Vice versa => DIGITUNDER (prediction 7) -->
+                                      <!-- Decision: apply MinDifference directionally -->
                                       <block type="controls_if" id="decision_trade">
-                                        <mutation xmlns="http://www.w3.org/1999/xhtml" elseif="1" else="1"></mutation>
+                                        <mutation elseif="1" else="1"></mutation>
+
+                                        <!-- IF: Over3Percentage >= Under7Percentage + MinDifference -->
                                         <value name="IF0">
-                                          <block type="logic_compare" id="comp_over_gt_under">
-                                            <field name="OP">GT</field>
-                                            <value name="A">
-                                              <block type="variables_get" id="get_over_pct">
-                                                <field name="VAR" id="Over3Percentage">Over3Percentage</field>
-                                              </block>
-                                            </value>
+                                          <block type="logic_compare" id="comp_over_vs_under_plus_mindiff">
+                                            <field name="OP">GTE</field>
+                                            <value name="A"><block type="variables_get"><field name="VAR" id="Over3Percentage">Over3Percentage</field></block></value>
                                             <value name="B">
-                                              <block type="variables_get" id="get_under_pct">
-                                                <field name="VAR" id="Under7Percentage">Under7Percentage</field>
+                                              <block type="math_arithmetic" id="under_plus_mindiff"><field name="OP">ADD</field>
+                                                <value name="A"><block type="variables_get"><field name="VAR" id="Under7Percentage">Under7Percentage</field></block></value>
+                                                <value name="B"><block type="variables_get"><field name="VAR" id="MinDifference">MinDifference</field></block></value>
                                               </block>
                                             </value>
                                           </block>
                                         </value>
+
                                         <statement name="DO0">
-                                          <!-- Purchase Over 3: DIGITOVER with prediction 3 -->
-                                          <block type="purchase" id="purchase_over">
-                                            <field name="PURCHASE_LIST">DIGITOVER</field>
-                                            <field name="PREDICTION">3</field>
-                                          </block>
+                                          <!-- Purchase DIGITOVER -->
+                                          <block type="purchase" id="purchase_over"><field name="PURCHASE_LIST">DIGITOVER</field></block>
                                         </statement>
+
+                                        <!-- IF1: Under7Percentage >= Over3Percentage + MinDifference -->
                                         <value name="IF1">
-                                          <block type="logic_compare" id="comp_under_gt_over">
-                                            <field name="OP">GT</field>
-                                            <value name="A">
-                                              <block type="variables_get" id="get_under_pct2">
-                                                <field name="VAR" id="Under7Percentage">Under7Percentage</field>
-                                              </block>
-                                            </value>
+                                          <block type="logic_compare" id="comp_under_vs_over_plus_mindiff">
+                                            <field name="OP">GTE</field>
+                                            <value name="A"><block type="variables_get"><field name="VAR" id="Under7Percentage">Under7Percentage</field></block></value>
                                             <value name="B">
-                                              <block type="variables_get" id="get_over_pct2">
-                                                <field name="VAR" id="Over3Percentage">Over3Percentage</field>
+                                              <block type="math_arithmetic" id="over_plus_mindiff"><field name="OP">ADD</field>
+                                                <value name="A"><block type="variables_get"><field name="VAR" id="Over3Percentage">Over3Percentage</field></block></value>
+                                                <value name="B"><block type="variables_get"><field name="VAR" id="MinDifference">MinDifference</field></block></value>
                                               </block>
                                             </value>
                                           </block>
                                         </value>
+
                                         <statement name="DO1">
-                                          <!-- Purchase Under 7: DIGITUNDER with prediction 7 -->
-                                          <block type="purchase" id="purchase_under">
-                                            <field name="PURCHASE_LIST">DIGITUNDER</field>
-                                            <field name="PREDICTION">7</field>
-                                          </block>
+                                          <!-- Purchase DIGITUNDER -->
+                                          <block type="purchase" id="purchase_under"><field name="PURCHASE_LIST">DIGITUNDER</field></block>
                                         </statement>
+
                                         <statement name="ELSE">
-                                          <block type="notify" id="notify_no_trade">
-                                            <field name="NOTIFICATION_TYPE">info</field>
-                                            <field name="NOTIFICATION_SOUND">silent</field>
-                                            <value name="MESSAGE">
-                                              <block type="text" id="txt_no_trade">
-                                                <field name="TEXT">Criteria not met — no trade</field>
-                                              </block>
-                                            </value>
+                                          <block type="notify" id="notify_no_trade"><field name="NOTIFICATION_TYPE">info</field><field name="NOTIFICATION_SOUND">silent</field>
+                                            <value name="MESSAGE"><block type="text" id="txt_no_trade"><field name="TEXT">Criteria not met — no trade (Min difference)</field></block></value>
                                           </block>
                                         </statement>
+
                                         <next>
-                                          <!-- Reset counters for next iteration -->
-                                          <block type="variables_set" id="reset_counts_end">
-                                            <field name="VAR" id="Over3Count">Over3Count</field>
-                                            <value name="VALUE">
-                                              <block type="math_number" id="zero3">
-                                                <field name="NUM">0</field>
-                                              </block>
-                                            </value>
+                                          <!-- Reset counters -->
+                                          <block type="variables_set" id="reset_counts_end"><field name="VAR" id="Over3Count">Over3Count</field>
+                                            <value name="VALUE"><block type="math_number" id="zero3"><field name="NUM">0</field></block></value>
                                             <next>
-                                              <block type="variables_set" id="reset_counts_end2">
-                                                <field name="VAR" id="Under7Count">Under7Count</field>
-                                                <value name="VALUE">
-                                                  <block type="math_number" id="zero4">
-                                                    <field name="NUM">0</field>
-                                                  </block>
-                                                </value>
+                                              <block type="variables_set" id="reset_counts_end2"><field name="VAR" id="Under7Count">Under7Count</field>
+                                                <value name="VALUE"><block type="math_number" id="zero4"><field name="NUM">0</field></block></value>
                                               </block>
                                             </next>
                                           </block>
                                         </next>
+
                                       </block>
                                     </next>
                                   </block>
@@ -498,11 +411,7 @@
     </statement>
   </block>
 
-  <!-- Hidden helper numbers (kept for completeness) -->
-  <block type="math_number" id="mn0" disabled="true" x="1187" y="424">
-    <field name="NUM">0</field>
-  </block>
-  <block type="math_number" id="mn_stake" disabled="true" x="1184" y="426">
-    <field name="NUM">0.35</field>
-  </block>
+  <!-- Hidden helper numbers -->
+  <block type="math_number" id="mn0" disabled="true" x="1187" y="424"><field name="NUM">0</field></block>
+  <block type="math_number" id="mn_stake" disabled="true" x="1184" y="426"><field name="NUM">0.35</field></block>
 </xml>
