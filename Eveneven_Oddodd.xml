@@ -1,45 +1,55 @@
 <xml xmlns="https://developers.google.com/blockly/xml" is_dbot="true" collection="false">
   <variables>
-    <variable id="InitialStake">InitialStake</variable>
-    <variable id="CurrentStake">CurrentStake</variable>
-    <variable id="Martingale">Martingale</variable>
-    <variable id="TotalProfit">TotalProfit</variable>
-    <variable id="LastResult">LastResult</variable>
-    <variable id="SequenceStep">SequenceStep</variable>
-    <variable id="TakeProfit">TakeProfit</variable>
-    <variable id="StopLoss">StopLoss</variable>
+    <variable id="stakeVar">Stake</variable>
+    <variable id="martingaleVar">Martingale</variable>
+    <variable id="currentStakeVar">CurrentStake</variable>
+    <variable id="totalProfitVar">TotalProfit</variable>
+    <variable id="tpVar">TP</variable>
+    <variable id="slVar">SL</variable>
+    <variable id="sequenceIndexVar">SequenceIndex</variable>
+    <variable id="tradeSequenceVar">TradeSequence</variable>
   </variables>
 
-  <!-- Initialize variables once -->
-  <block type="run_once" id="init" x="20" y="20">
-    <statement name="DO">
-      <block type="set_variable" id="set_init_1">
-        <field name="VAR" id="InitialStake">InitialStake</field>
-        <value name="VALUE"><block type="math_number"><field name="NUM">1</field></block></value>
+  <!-- Initialization -->
+  <block type="variables_set" id="init_stake" x="20" y="20">
+    <field name="VAR" id="stakeVar">Stake</field>
+    <value name="VALUE"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
+    <next>
+      <block type="variables_set" id="init_martingale">
+        <field name="VAR" id="martingaleVar">Martingale</field>
+        <value name="VALUE"><shadow type="math_number"><field name="NUM">2</field></shadow></value>
         <next>
-          <block type="set_variable" id="set_init_2">
-            <field name="VAR" id="CurrentStake">CurrentStake</field>
-            <value name="VALUE"><block type="variables_get"><field name="VAR" id="InitialStake"/></block></value>
+          <block type="variables_set" id="init_current_stake">
+            <field name="VAR" id="currentStakeVar">CurrentStake</field>
+            <value name="VALUE"><shadow type="variables_get"><field name="VAR" id="stakeVar">Stake</field></shadow></value>
             <next>
-              <block type="set_variable" id="set_init_3">
-                <field name="VAR" id="Martingale">Martingale</field>
-                <value name="VALUE"><block type="math_number"><field name="NUM">2</field></block></value>
+              <block type="variables_set" id="init_total_profit">
+                <field name="VAR" id="totalProfitVar">TotalProfit</field>
+                <value name="VALUE"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
                 <next>
-                  <block type="set_variable" id="set_init_4">
-                    <field name="VAR" id="TotalProfit">TotalProfit</field>
-                    <value name="VALUE"><block type="math_number"><field name="NUM">0</field></block></value>
+                  <block type="variables_set" id="init_tp">
+                    <field name="VAR" id="tpVar">TP</field>
+                    <value name="VALUE"><shadow type="math_number"><field name="NUM">10</field></shadow></value>
                     <next>
-                      <block type="set_variable" id="set_init_5">
-                        <field name="VAR" id="SequenceStep">SequenceStep</field>
-                        <value name="VALUE"><block type="math_number"><field name="NUM">0</field></block></value>
+                      <block type="variables_set" id="init_sl">
+                        <field name="VAR" id="slVar">SL</field>
+                        <value name="VALUE"><shadow type="math_number"><field name="NUM">10</field></shadow></value>
                         <next>
-                          <block type="set_variable" id="set_init_6">
-                            <field name="VAR" id="TakeProfit">TakeProfit</field>
-                            <value name="VALUE"><block type="math_number"><field name="NUM">10</field></block></value>
+                          <block type="variables_set" id="init_sequence_index">
+                            <field name="VAR" id="sequenceIndexVar">SequenceIndex</field>
+                            <value name="VALUE"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
                             <next>
-                              <block type="set_variable" id="set_init_7">
-                                <field name="VAR" id="StopLoss">StopLoss</field>
-                                <value name="VALUE"><block type="math_number"><field name="NUM">-10</field></block></value>
+                              <block type="variables_set" id="init_trade_sequence">
+                                <field name="VAR" id="tradeSequenceVar">TradeSequence</field>
+                                <value name="VALUE">
+                                  <shadow type="lists_create_with">
+                                    <mutation items="4"></mutation>
+                                    <value name="ADD0"><shadow type="text"><field name="TEXT">odd</field></shadow></value>
+                                    <value name="ADD1"><shadow type="text"><field name="TEXT">odd</field></shadow></value>
+                                    <value name="ADD2"><shadow type="text"><field name="TEXT">even</field></shadow></value>
+                                    <value name="ADD3"><shadow type="text"><field name="TEXT">even</field></shadow></value>
+                                  </shadow>
+                                </value>
                               </block>
                             </next>
                           </block>
@@ -53,160 +63,105 @@
           </block>
         </next>
       </block>
-    </statement>
+    </next>
   </block>
 
-  <!-- Main Trade Definition -->
-  <block type="trade_definition" id="trade_def" x="20" y="300">
-    <field name="NAME">OddEvenSequenceBot</field>
-
-    <!-- BEFORE PURCHASE -->
-    <statement name="BEFORE_PURCHASE">
-      <block type="controls_if" id="choose_side">
-        <value name="IF0">
-          <block type="logic_compare">
-            <field name="OP">LT</field>
-            <value name="A"><block type="variables_get"><field name="VAR" id="SequenceStep"/></block></value>
-            <value name="B"><block type="math_number"><field name="NUM">2</field></block></value>
-          </block>
-        </value>
-        <statement name="DO0">
-          <block type="trade_purchase">
-            <field name="CONTRACT">DIGITODD</field>
-            <field name="DURATION_TYPE">TICKS</field>
-            <field name="DURATION">1</field>
-            <value name="AMOUNT"><block type="variables_get"><field name="VAR" id="CurrentStake"/></block></value>
-          </block>
-        </statement>
-        <next>
-          <block type="controls_if" id="choose_side_even">
-            <value name="IF0">
-              <block type="logic_compare">
-                <field name="OP">GTE</field>
-                <value name="A"><block type="variables_get"><field name="VAR" id="SequenceStep"/></block></value>
-                <value name="B"><block type="math_number"><field name="NUM">2</field></block></value>
-              </block>
-            </value>
-            <statement name="DO0">
-              <block type="trade_purchase">
-                <field name="CONTRACT">DIGITEVEN</field>
-                <field name="DURATION_TYPE">TICKS</field>
-                <field name="DURATION">1</field>
-                <value name="AMOUNT"><block type="variables_get"><field name="VAR" id="CurrentStake"/></block></value>
-              </block>
-            </statement>
-          </block>
-        </next>
+  <!-- Main Loop -->
+  <block type="controls_whileUntil" id="main_loop" x="20" y="300">
+    <field name="MODE">WHILE</field>
+    <value name="BOOL">
+      <block type="logic_boolean" id="condition_profit">
+        <field name="BOOL">TRUE</field>
       </block>
-    </statement>
-
-    <!-- AFTER PURCHASE -->
-    <statement name="AFTER_PURCHASE">
-      <block type="set_variable" id="after_result">
-        <field name="VAR" id="LastResult">LastResult</field>
-        <value name="VALUE"><block type="contract_result_profit"/></value>
+    </value>
+    <statement name="DO">
+      <block type="procedures_callnoreturn" id="trade_block">
+        <mutation name="Trade"></mutation>
         <next>
-          <block type="set_variable" id="update_profit">
-            <field name="VAR" id="TotalProfit">TotalProfit</field>
+          <!-- Update Total Profit -->
+          <block type="variables_set" id="update_profit">
+            <field name="VAR" id="totalProfitVar">TotalProfit</field>
             <value name="VALUE">
-              <block type="math_arithmetic">
+              <shadow type="math_arithmetic">
                 <field name="OP">ADD</field>
-                <value name="A"><block type="variables_get"><field name="VAR" id="TotalProfit"/></block></value>
-                <value name="B"><block type="variables_get"><field name="VAR" id="LastResult"/></block></value>
-              </block>
+                <value name="A"><shadow type="variables_get"><field name="VAR" id="totalProfitVar">TotalProfit</field></shadow></value>
+                <value name="B"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
+              </shadow>
             </value>
             <next>
-              <!-- Martingale on loss -->
-              <block type="controls_if" id="martingale_if">
+              <!-- Check win/loss -->
+              <block type="controls_if" id="if_win_loss">
                 <value name="IF0">
-                  <block type="logic_compare">
-                    <field name="OP">LT</field>
-                    <value name="A"><block type="variables_get"><field name="VAR" id="LastResult"/></block></value>
-                    <value name="B"><block type="math_number"><field name="NUM">0</field></block></value>
-                  </block>
+                  <block type="logic_boolean"><field name="BOOL">TRUE</field></block>
                 </value>
                 <statement name="DO0">
-                  <block type="set_variable" id="do_martingale">
-                    <field name="VAR" id="CurrentStake">CurrentStake</field>
+                  <!-- Reset Current Stake if won -->
+                  <block type="variables_set" id="reset_stake">
+                    <field name="VAR" id="currentStakeVar">CurrentStake</field>
+                    <value name="VALUE"><shadow type="variables_get"><field name="VAR" id="stakeVar">Stake</field></shadow></value>
+                  </block>
+                </statement>
+                <statement name="ELSE">
+                  <!-- Multiply Current Stake by Martingale if lost -->
+                  <block type="variables_set" id="martingale_stake">
+                    <field name="VAR" id="currentStakeVar">CurrentStake</field>
                     <value name="VALUE">
-                      <block type="math_arithmetic">
+                      <shadow type="math_arithmetic">
                         <field name="OP">MULTIPLY</field>
-                        <value name="A"><block type="variables_get"><field name="VAR" id="CurrentStake"/></block></value>
-                        <value name="B"><block type="variables_get"><field name="VAR" id="Martingale"/></block></value>
-                      </block>
+                        <value name="A"><shadow type="variables_get"><field name="VAR" id="currentStakeVar">CurrentStake</field></shadow></value>
+                        <value name="B"><shadow type="variables_get"><field name="VAR" id="martingaleVar">Martingale</field></shadow></value>
+                      </shadow>
                     </value>
                   </block>
                 </statement>
                 <next>
-                  <!-- Reset stake after win -->
-                  <block type="controls_if" id="reset_after_win">
-                    <value name="IF0">
-                      <block type="logic_compare">
-                        <field name="OP">GT</field>
-                        <value name="A"><block type="variables_get"><field name="VAR" id="LastResult"/></block></value>
-                        <value name="B"><block type="math_number"><field name="NUM">0</field></block></value>
-                      </block>
+                  <!-- Cycle Sequence -->
+                  <block type="variables_set" id="sequence_cycle">
+                    <field name="VAR" id="sequenceIndexVar">SequenceIndex</field>
+                    <value name="VALUE">
+                      <shadow type="math_arithmetic">
+                        <field name="OP">MODULO</field>
+                        <value name="A">
+                          <shadow type="math_arithmetic">
+                            <field name="OP">ADD</field>
+                            <value name="A"><shadow type="variables_get"><field name="VAR" id="sequenceIndexVar">SequenceIndex</field></shadow></value>
+                            <value name="B"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
+                          </shadow>
+                        </value>
+                        <value name="B"><shadow type="math_number"><field name="NUM">4</field></shadow></value>
+                      </shadow>
                     </value>
-                    <statement name="DO0">
-                      <block type="set_variable" id="reset_stake">
-                        <field name="VAR" id="CurrentStake">CurrentStake</field>
-                        <value name="VALUE"><block type="variables_get"><field name="VAR" id="InitialStake"/></block></value>
-                      </block>
-                    </statement>
                   </block>
-                </next>
-              </block>
-              <next>
-                <!-- Advance sequence step 0->1->2->3->0 -->
-                <block type="set_variable" id="advance_seq">
-                  <field name="VAR" id="SequenceStep">SequenceStep</field>
-                  <value name="VALUE">
-                    <block type="math_arithmetic">
-                      <field name="OP">MODULO</field>
-                      <value name="A">
-                        <block type="math_arithmetic">
-                          <field name="OP">ADD</field>
-                          <value name="A"><block type="variables_get"><field name="VAR" id="SequenceStep"/></block></value>
-                          <value name="B"><block type="math_number"><field name="NUM">1</field></block></value>
-                        </block>
-                      </value>
-                      <value name="B"><block type="math_number"><field name="NUM">4</field></block></value>
-                    </block>
-                  </value>
                   <next>
-                    <!-- Check TakeProfit -->
-                    <block type="controls_if" id="check_tp">
+                    <!-- Stop trading if TP or SL reached -->
+                    <block type="controls_if" id="stop_trading">
                       <value name="IF0">
-                        <block type="logic_compare">
-                          <field name="OP">GTE</field>
-                          <value name="A"><block type="variables_get"><field name="VAR" id="TotalProfit"/></block></value>
-                          <value name="B"><block type="variables_get"><field name="VAR" id="TakeProfit"/></block></value>
+                        <block type="logic_or">
+                          <value name="A">
+                            <block type="logic_compare">
+                              <field name="OP">GTE</field>
+                              <value name="A"><shadow type="variables_get"><field name="VAR" id="totalProfitVar">TotalProfit</field></shadow></value>
+                              <value name="B"><shadow type="variables_get"><field name="VAR" id="tpVar">TP</field></shadow></value>
+                            </block>
+                          </value>
+                          <value name="B">
+                            <block type="logic_compare">
+                              <field name="OP">LTE</field>
+                              <value name="A"><shadow type="variables_get"><field name="VAR" id="totalProfitVar">TotalProfit</field></shadow></value>
+                              <value name="B"><shadow type="variables_get"><field name="VAR" id="slVar">SL</field></shadow></value>
+                            </block>
+                          </value>
                         </block>
                       </value>
                       <statement name="DO0">
-                        <block type="notify"><field name="MSG">Take Profit reached — stopping bot</field></block>
-                        <next><block type="stop_all"/></next>
-                      </statement>
-                      <next>
-                        <!-- Check StopLoss -->
-                        <block type="controls_if" id="check_sl">
-                          <value name="IF0">
-                            <block type="logic_compare">
-                              <field name="OP">LTE</field>
-                              <value name="A"><block type="variables_get"><field name="VAR" id="TotalProfit"/></block></value>
-                              <value name="B"><block type="variables_get"><field name="VAR" id="StopLoss"/></block></value>
-                            </block>
-                          </value>
-                          <statement name="DO0">
-                            <block type="notify"><field name="MSG">Stop Loss reached — stopping bot</field></block>
-                            <next><block type="stop_all"/></next>
-                          </statement>
+                        <block type="controls_stop" id="stop_loop">
+                          <field name="MODE">ALL</field>
                         </block>
-                      </next>
+                      </statement>
                     </block>
                   </next>
-                </block>
-              </next>
+                </next>
+              </block>
             </next>
           </block>
         </next>
