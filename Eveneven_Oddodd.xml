@@ -1,172 +1,248 @@
 <xml xmlns="https://developers.google.com/blockly/xml" is_dbot="true" collection="false">
   <variables>
-    <variable id="smartRisk">smartRisk</variable>
+    <variable id="InitialStake">InitialStake</variable>
+    <variable id="CurrentStake">CurrentStake</variable>
+    <variable id="Martingale">Martingale</variable>
+    <variable id="TotalProfit">TotalProfit</variable>
+    <variable id="LastResult">LastResult</variable>
+    <variable id="SequenceStep">SequenceStep</variable>
+    <variable id="TakeProfit">TakeProfit</variable>
+    <variable id="StopLoss">StopLoss</variable>
   </variables>
 
-  <!-- Initialize bot settings -->
-  <block type="run_once" id="init_smartrisk" x="20" y="20">
+  <!-- Initialize variables -->
+  <block type="run_once" id="run_once_init" x="20" y="20">
     <statement name="DO">
-      <block type="variables_set" id="set_smartrisk">
-        <field name="VAR" id="smartRisk">smartRisk</field>
-        <value name="VALUE">
-          <block type="smartrisk_settings" id="smartrisk_settings_block">
-            <field name="STRATEGY">martingale</field>
-            <value name="INVESTMENT">
-              <shadow type="math_number">
-                <field name="NUM">1</field>
-              </shadow>
-            </value>
-            <value name="TAKE_PROFIT">
-              <shadow type="math_number">
-                <field name="NUM">10</field>
-              </shadow>
-            </value>
-            <value name="STOP_LOSS">
-              <shadow type="math_number">
-                <field name="NUM">-10</field>
-              </shadow>
-            </value>
-            <value name="PARAMETERS">
-              <block type="lists_create_with">
-                <mutation items="1"></mutation>
-                <value name="ADD0">
-                  <block type="math_number">
-                    <field name="NUM">2</field>
+      <block type="set_variable" id="set_init_1">
+        <field name="VAR" id="InitialStake">InitialStake</field>
+        <value name="VALUE"><block type="math_number"><field name="NUM">1</field></block></value>
+        <next>
+          <block type="set_variable" id="set_init_2">
+            <field name="VAR" id="CurrentStake">CurrentStake</field>
+            <value name="VALUE"><block type="variables_get"><field name="VAR" id="InitialStake"/></block></value>
+            <next>
+              <block type="set_variable" id="set_init_3">
+                <field name="VAR" id="Martingale">Martingale</field>
+                <value name="VALUE"><block type="math_number"><field name="NUM">2</field></block></value>
+                <next>
+                  <block type="set_variable" id="set_init_4">
+                    <field name="VAR" id="TotalProfit">TotalProfit</field>
+                    <value name="VALUE"><block type="math_number"><field name="NUM">0</field></block></value>
+                    <next>
+                      <block type="set_variable" id="set_init_5">
+                        <field name="VAR" id="SequenceStep">SequenceStep</field>
+                        <value name="VALUE"><block type="math_number"><field name="NUM">0</field></block></value>
+                        <next>
+                          <block type="set_variable" id="set_init_6">
+                            <field name="VAR" id="TakeProfit">TakeProfit</field>
+                            <value name="VALUE"><block type="math_number"><field name="NUM">10</field></block></value>
+                            <next>
+                              <block type="set_variable" id="set_init_7">
+                                <field name="VAR" id="StopLoss">StopLoss</field>
+                                <value name="VALUE"><block type="math_number"><field name="NUM">-10</field></block></value>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
                   </block>
-                </value>
+                </next>
               </block>
-            </value>
+            </next>
           </block>
-        </value>
+        </next>
       </block>
     </statement>
   </block>
 
-  <!-- Main trade block -->
-  <block type="trade" id="main_trade" x="20" y="200">
-    <field name="MARKET_LIST">synthetic_index</field>
-    <field name="SUBMARKET_LIST">random_index</field>
-    <field name="SYMBOL_LIST">R_100</field>
-    <field name="TRADETYPECAT_LIST">digits</field>
-    <field name="TRADETYPE_LIST">evenodd</field>
-    <field name="TYPE_LIST">both</field>
-    <field name="CANDLEINTERVAL_LIST">60</field>
-    <field name="TIME_MACHINE_ENABLED">TRUE</field>
-    <field name="RESTARTONERROR">TRUE</field>
+  <!-- Trade block -->
+  <block type="trade_definition" id="trade_def" x="20" y="260">
+    <field name="NAME">OddEvenSequenceBot</field>
 
-    <!-- Before purchase: choose ODD/EVEN based on sequence step -->
-    <statement name="SUBMARKET">
-      <block type="before_purchase" id="before_purchase_sequence">
-        <statement name="BEFOREPURCHASE_STACK">
-          <block type="controls_if" id="sequence_check">
-            <mutation elseif="3"></mutation>
-
+    <!-- Before purchase -->
+    <statement name="BEFORE_PURCHASE">
+      <block type="controls_if" id="choose_side">
+        <value name="IF0">
+          <block type="logic_compare"><field name="OP">LT</field>
+            <value name="A"><block type="variables_get"><field name="VAR" id="SequenceStep"/></block></value>
+            <value name="B"><block type="math_number"><field name="NUM">4</field></block></value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="controls_if" id="seq_step_check">
             <value name="IF0">
-              <block type="logic_compare">
-                <field name="OP">EQ</field>
-                <value name="A"><block type="smartrisk_query">
-                  <field name="SMARTRISK_LIST">sequenceStep</field>
-                  <field name="SMARTRISK_VAR" id="smartRisk">smartRisk</field>
-                </block></value>
+              <block type="logic_compare"><field name="OP">EQ</field>
+                <value name="A"><block type="variables_get"><field name="VAR" id="SequenceStep"/></block></value>
                 <value name="B"><block type="math_number"><field name="NUM">0</field></block></value>
               </block>
             </value>
             <statement name="DO0">
-              <block type="smartrisk_prepare">
-                <field name="SMARTRISKFIELD_LIST">DIGITODD</field>
-                <field name="SMARTRISK_VAR" id="smartRisk">smartRisk</field>
-                <next>
-                  <block type="purchase"><field name="PURCHASE_LIST">DIGITODD</field></block>
-                </next>
+              <block type="trade_purchase">
+                <field name="CONTRACT">DIGITODD</field>
+                <field name="DURATION_TYPE">TICKS</field>
+                <field name="DURATION">1</field>
+                <value name="AMOUNT"><block type="variables_get"><field name="VAR" id="CurrentStake"/></block></value>
               </block>
             </statement>
-
-            <value name="IF1">
-              <block type="logic_compare">
-                <field name="OP">EQ</field>
-                <value name="A"><block type="smartrisk_query">
-                  <field name="SMARTRISK_LIST">sequenceStep</field>
-                  <field name="SMARTRISK_VAR" id="smartRisk">smartRisk</field>
-                </block></value>
-                <value name="B"><block type="math_number"><field name="NUM">1</field></block></value>
-              </block>
-            </value>
-            <statement name="DO1">
-              <block type="smartrisk_prepare">
-                <field name="SMARTRISKFIELD_LIST">DIGITODD</field>
-                <field name="SMARTRISK_VAR" id="smartRisk">smartRisk</field>
-                <next>
-                  <block type="purchase"><field name="PURCHASE_LIST">DIGITODD</field></block>
-                </next>
-              </block>
-            </statement>
-
-            <value name="IF2">
-              <block type="logic_compare">
-                <field name="OP">EQ</field>
-                <value name="A"><block type="smartrisk_query">
-                  <field name="SMARTRISK_LIST">sequenceStep</field>
-                  <field name="SMARTRISK_VAR" id="smartRisk">smartRisk</field>
-                </block></value>
-                <value name="B"><block type="math_number"><field name="NUM">2</field></block></value>
-              </block>
-            </value>
-            <statement name="DO2">
-              <block type="smartrisk_prepare">
-                <field name="SMARTRISKFIELD_LIST">DIGITEVEN</field>
-                <field name="SMARTRISK_VAR" id="smartRisk">smartRisk</field>
-                <next>
-                  <block type="purchase"><field name="PURCHASE_LIST">DIGITEVEN</field></block>
-                </next>
-              </block>
-            </statement>
-
-            <value name="IF3">
-              <block type="logic_compare">
-                <field name="OP">EQ</field>
-                <value name="A"><block type="smartrisk_query">
-                  <field name="SMARTRISK_LIST">sequenceStep</field>
-                  <field name="SMARTRISK_VAR" id="smartRisk">smartRisk</field>
-                </block></value>
-                <value name="B"><block type="math_number"><field name="NUM">3</field></block></value>
-              </block>
-            </value>
-            <statement name="DO3">
-              <block type="smartrisk_prepare">
-                <field name="SMARTRISKFIELD_LIST">DIGITEVEN</field>
-                <field name="SMARTRISK_VAR" id="smartRisk">smartRisk</field>
-                <next>
-                  <block type="purchase"><field name="PURCHASE_LIST">DIGITEVEN</field></block>
-                </next>
-              </block>
-            </statement>
-
-          </block>
-        </statement>
-      </block>
-    </statement>
-
-    <!-- After purchase: update result, martingale, sequence step, TP/SL -->
-    <statement name="AFTER_PURCHASE">
-      <block type="after_purchase" id="after_purchase_logic">
-        <statement name="AFTERPURCHASE_STACK">
-          <block type="smartrisk_result">
-            <field name="SMARTRISK_VAR" id="smartRisk">smartRisk</field>
-            <value name="SMARTRISKFIELD_TOLERANCE">
-              <shadow type="math_number"><field name="NUM">0.1</field></shadow>
-            </value>
             <next>
-              <block type="smartrisk_query">
-                <field name="SMARTRISK_LIST">continueTrade</field>
-                <field name="SMARTRISK_VAR" id="smartRisk">smartRisk</field>
+              <block type="controls_if" id="seq_step_1">
+                <value name="IF0">
+                  <block type="logic_compare"><field name="OP">EQ</field>
+                    <value name="A"><block type="variables_get"><field name="VAR" id="SequenceStep"/></block></value>
+                    <value name="B"><block type="math_number"><field name="NUM">1</field></block></value>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="trade_purchase">
+                    <field name="CONTRACT">DIGITODD</field>
+                    <field name="DURATION_TYPE">TICKS</field>
+                    <field name="DURATION">1</field>
+                    <value name="AMOUNT"><block type="variables_get"><field name="VAR" id="CurrentStake"/></block></value>
+                  </block>
+                </statement>
                 <next>
-                  <block type="trade_again"/>
+                  <block type="controls_if" id="seq_step_2">
+                    <value name="IF0">
+                      <block type="logic_compare"><field name="OP">EQ</field>
+                        <value name="A"><block type="variables_get"><field name="VAR" id="SequenceStep"/></block></value>
+                        <value name="B"><block type="math_number"><field name="NUM">2</field></block></value>
+                      </block>
+                    </value>
+                    <statement name="DO0">
+                      <block type="trade_purchase">
+                        <field name="CONTRACT">DIGITEVEN</field>
+                        <field name="DURATION_TYPE">TICKS</field>
+                        <field name="DURATION">1</field>
+                        <value name="AMOUNT"><block type="variables_get"><field name="VAR" id="CurrentStake"/></block></value>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="controls_if" id="seq_step_3">
+                        <value name="IF0">
+                          <block type="logic_compare"><field name="OP">EQ</field>
+                            <value name="A"><block type="variables_get"><field name="VAR" id="SequenceStep"/></block></value>
+                            <value name="B"><block type="math_number"><field name="NUM">3</field></block></value>
+                          </block>
+                        </value>
+                        <statement name="DO0">
+                          <block type="trade_purchase">
+                            <field name="CONTRACT">DIGITEVEN</field>
+                            <field name="DURATION_TYPE">TICKS</field>
+                            <field name="DURATION">1</field>
+                            <value name="AMOUNT"><block type="variables_get"><field name="VAR" id="CurrentStake"/></block></value>
+                          </block>
+                        </statement>
+                      </block>
+                    </next>
+                  </block>
                 </next>
               </block>
             </next>
           </block>
         </statement>
       </block>
+    </statement>
+
+    <!-- After purchase -->
+    <statement name="AFTER_PURCHASE">
+      <block type="set_variable" id="after_result">
+        <field name="VAR" id="LastResult">LastResult</field>
+        <value name="VALUE"><block type="contract_result_profit"/></value>
+        <next>
+          <block type="set_variable" id="update_total">
+            <field name="VAR" id="TotalProfit">TotalProfit</field>
+            <value name="VALUE">
+              <block type="math_arithmetic"><field name="OP">ADD</field>
+                <value name="A"><block type="variables_get"><field name="VAR" id="TotalProfit"/></block></value>
+                <value name="B"><block type="variables_get"><field name="VAR" id="LastResult"/></block></value>
+              </block>
+            </value>
+            <next>
+              <block type="controls_if" id="martingale_check">
+                <value name="IF0">
+                  <block type="logic_compare"><field name="OP">LT</field>
+                    <value name="A"><block type="variables_get"><field name="VAR" id="LastResult"/></block></value>
+                    <value name="B"><block type="math_number"><field name="NUM">0</field></block></value>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="set_variable" id="apply_martingale">
+                    <field name="VAR" id="CurrentStake">CurrentStake</field>
+                    <value name="VALUE">
+                      <block type="math_arithmetic"><field name="OP">MULTIPLY</field>
+                        <value name="A"><block type="variables_get"><field name="VAR" id="CurrentStake"/></block></value>
+                        <value name="B"><block type="variables_get"><field name="VAR" id="Martingale"/></block></value>
+                      </block>
+                    </value>
+                  </block>
+                </statement>
+                <next>
+                  <block type="controls_if" id="reset_after_win">
+                    <value name="IF0">
+                      <block type="logic_compare"><field name="OP">GT</field>
+                        <value name="A"><block type="variables_get"><field name="VAR" id="LastResult"/></block></value>
+                        <value name="B"><block type="math_number"><field name="NUM">0</field></block></value>
+                      </block>
+                    </value>
+                    <statement name="DO0">
+                      <block type="set_variable" id="reset_stake_after_win">
+                        <field name="VAR" id="CurrentStake">CurrentStake</field>
+                        <value name="VALUE"><block type="variables_get"><field name="VAR" id="InitialStake"/></block></value>
+                      </block>
+                    </statement>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+
+      <!-- Advance sequence step -->
+      <next>
+        <block type="set_variable" id="advance_sequence">
+          <field name="VAR" id="SequenceStep">SequenceStep</field>
+          <value name="VALUE">
+            <block type="math_arithmetic"><field name="OP">MOD</field>
+              <value name="A"><block type="math_arithmetic"><field name="OP">ADD</field>
+                <value name="A"><block type="variables_get"><field name="VAR" id="SequenceStep"/></block></value>
+                <value name="B"><block type="math_number"><field name="NUM">1</field></block></value>
+              </block></value>
+              <value name="B"><block type="math_number"><field name="NUM">4</field></block></value>
+            </block>
+          </value>
+          <next>
+            <!-- TP/SL check -->
+            <block type="controls_if" id="check_tp">
+              <value name="IF0">
+                <block type="logic_compare"><field name="OP">GTE</field>
+                  <value name="A"><block type="variables_get"><field name="VAR" id="TotalProfit"/></block></value>
+                  <value name="B"><block type="variables_get"><field name="VAR" id="TakeProfit"/></block></value>
+                </block>
+              </value>
+              <statement name="DO0">
+                <block type="notify"><field name="MSG">Take Profit reached — stopping bot</field></block>
+                <next><block type="stop_all"/></next>
+              </statement>
+              <next>
+                <block type="controls_if" id="check_sl">
+                  <value name="IF0">
+                    <block type="logic_compare"><field name="OP">LTE</field>
+                      <value name="A"><block type="variables_get"><field name="VAR" id="TotalProfit"/></block></value>
+                      <value name="B"><block type="variables_get"><field name="VAR" id="StopLoss"/></block></value>
+                    </block>
+                  </value>
+                  <statement name="DO0">
+                    <block type="notify"><field name="MSG">Stop Loss reached — stopping bot</field></block>
+                    <next><block type="stop_all"/></next>
+                  </statement>
+                </block>
+              </next>
+            </block>
+          </next>
+        </block>
+      </next>
     </statement>
   </block>
 </xml>
